@@ -232,6 +232,7 @@ static_assert(false,
 #include <cppad/cg/model/compiler/c_compiler.hpp>
 #include <cppad/cg/model/compiler/abstract_c_compiler.hpp>
 #include <cppad/cg/model/compiler/gcc_compiler.hpp>
+#include <cppad/cg/model/compiler/nvcc_compiler.hpp>
 #include <cppad/cg/model/compiler/clang_compiler.hpp>
 
 // model source code generation helpers

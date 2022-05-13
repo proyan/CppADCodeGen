@@ -49,6 +49,7 @@ void ModelCSourceGen<Base>::generateZeroSource() {
     finishedJob();
 
     LanguageC<Base> langC(_baseTypeName);
+    langC.setForCuda(_forCuda);
     langC.setMaxAssignmentsPerFunction(_maxAssignPerFunc, &_sources);
     langC.setMaxOperationsPerAssignment(_maxOperationsPerAssignment);
     langC.setParameterPrecision(_parameterPrecision);

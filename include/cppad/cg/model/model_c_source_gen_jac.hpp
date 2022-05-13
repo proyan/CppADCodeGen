@@ -52,6 +52,7 @@ void ModelCSourceGen<Base>::generateJacobianSource() {
     finishedJob();
 
     LanguageC<Base> langC(_baseTypeName);
+    langC.setForCuda(_forCuda);
     langC.setMaxAssignmentsPerFunction(_maxAssignPerFunc, &_sources);
     langC.setMaxOperationsPerAssignment(_maxOperationsPerAssignment);
     langC.setParameterPrecision(_parameterPrecision);
@@ -136,6 +137,7 @@ void ModelCSourceGen<Base>::generateSparseJacobianSource(bool forward) {
     finishedJob();
 
     LanguageC<Base> langC(_baseTypeName);
+    langC.setForCuda(_forCuda);
     langC.setMaxAssignmentsPerFunction(_maxAssignPerFunc, &_sources);
     langC.setMaxOperationsPerAssignment(_maxOperationsPerAssignment);
     langC.setParameterPrecision(_parameterPrecision);
@@ -258,6 +260,7 @@ std::string ModelCSourceGen<Base>::generateSparseJacobianForRevSingleThreadSourc
                                                                                   bool forward) {
     
     LanguageC<Base> langC(_baseTypeName);
+    langC.setForCuda(_forCuda);
     std::string argsDcl = langC.generateDefaultFunctionArgumentsDcl();
     std::vector<std::string> argsDcl2 = langC.generateDefaultFunctionArgumentsDcl2();
 
@@ -325,6 +328,7 @@ std::string ModelCSourceGen<Base>::generateSparseJacobianForRevMultiThreadSource
                                                                                  bool forward,
                                                                                  MultiThreadingType multiThreadingType) {
     LanguageC<Base> langC(_baseTypeName);
+    langC.setForCuda(_forCuda);
     std::string argsDcl = langC.generateDefaultFunctionArgumentsDcl();
     std::vector<std::string> argsDcl2 = langC.generateDefaultFunctionArgumentsDcl2();
 

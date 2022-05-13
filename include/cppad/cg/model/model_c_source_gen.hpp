@@ -170,6 +170,10 @@ protected:
      * sparse Jacobian and sparse Hessian if possible and requested by the
      * model library (experimental).
      */
+
+     /// generate device code for cuda
+     bool _forCuda;
+  
     bool _multiThreading;
     /// generate source code for the zero order model evaluation
     bool _zero;
@@ -311,6 +315,7 @@ public:
         _sparseHessianReusesRev2(true),
         _jacMode(JacobianADMode::Automatic),
         _atomicsInfo(nullptr),
+        _forCuda(false),
         _maxAssignPerFunc(20000),
         _maxOperationsPerAssignment(1000),
         _jobTimer(nullptr) {
@@ -492,6 +497,18 @@ public:
         _jacobian = create;
     }
 
+
+    /**
+     * Defines whether or not to generate source-code to run on gpu device
+     *
+     * @param forCuda true if source-code is meant to be run on gpu device
+     *                false otherwise
+     */
+    inline void setForCuda(bool forCuda) {
+        _forCuda = forCuda;
+    }
+
+  
     /**
      * Determines whether or not to generate source-code for a function
      * that evaluates a sparse Hessian.

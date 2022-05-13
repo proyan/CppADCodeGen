@@ -64,6 +64,10 @@ protected:
     std::string _indentation;
     // variable name used for the inlet variable
     std::string _inArgName;
+    // variable name used for the offset variable
+    std::string _argOffsetName;
+    // variable create lang for Cuda
+     bool _forCuda;  
     // variable name used for the outlet variable
     std::string _outArgName;
     // variable name used for the atomic functions array
@@ -129,6 +133,8 @@ public:
         _baseTypeName(std::move(varTypeName)),
         _spaces(spaces, ' '),
         _info(nullptr),
+        _forCuda(false),
+        _argOffsetName("offset"),
         _inArgName("in"),
         _outArgName("out"),
         _atomicArgName("atomicFun"),
@@ -155,6 +161,10 @@ public:
         _inArgName = inArgName;
     }
 
+    inline void setForCuda(const bool forCuda) {
+        _forCuda = forCuda;
+    }
+  
     inline const std::string& getArgumentOut() const {
         return _outArgName;
     }
@@ -421,7 +431,7 @@ public:
 
         _ss << _spaces << "//dependent variables\n";
         for (size_t i = 0; i < depArg.size(); i++) {
-            _ss << _spaces << argumentDeclaration(depArg[i]) << " = " << _outArgName << "[" << i << "];\n";
+          _ss << _spaces << argumentDeclaration(depArg[i]) << " = " << _outArgName << "[" << i << " + "<<_argOffsetName << "];\n";
         }
 
         std::string code = _ss.str();
@@ -435,8 +445,9 @@ public:
                              "There must be at least one independent argument")
 
         _ss << _spaces << "//independent variables\n";
+        // argumentDeclaration(indArg[i]) -> double* x
         for (size_t i = 0; i < indArg.size(); i++) {
-            _ss << _spaces << "const " << argumentDeclaration(indArg[i]) << " = " << _inArgName << "[" << i << "];\n";
+          _ss << _spaces << "const " << argumentDeclaration(indArg[i]) << " = " << _inArgName << "[" << i << " + "<<_argOffsetName << "];\n";
         }
 
         std::string code = _ss.str();
@@ -526,6 +537,27 @@ public:
     CPPAD_CG_C_LANG_FUNCNAME(log1p)
 #endif
 
+
+    /**
+     * Matches the thread ID on a gpu to the pointer location of the input/output array.
+     *
+     * @param stream where the code is outputted.
+     */
+    inline void getThreadSpecificOffset(std::ostringstream& out) {
+      _ss << _spaces << "//get thread ID\n";
+      _ss << _spaces << "const int " <<  _argOffsetName << " = blockIdx.x*blockDim.x + threadIdx.x;\n";
+    }
+
+    /**
+     * Matches the thread ID on a gpu to the pointer location of the input/output array.
+     *
+     * @param stream where the code is outputted.
+     */
+    inline void setOffsetToZero(std::ostringstream& out) {
+      _ss << _spaces << "//offset set to zero\n";
+      _ss << _spaces << "const int "<< _argOffsetName<<" = 0;\n";
+    }
+    
     /**
      * Prints a function declaration where each argument is in a different line.
      *
@@ -873,12 +905,16 @@ protected:
             _code << "\n";
             printFunctionDeclaration(_code, "void", _functionName, funcArgDcl_);
             _code  << " {\n";
-            _nameGen->customFunctionVariableDeclarations(_code);
-            _code << generateIndependentVariableDeclaration() << "\n";
-            _code << generateDependentVariableDeclaration() << "\n";
+
+            // if CUDA support:
+            // Memory allocation
+            //
+            _nameGen->customFunctionVariableDeclarations(_code); // Does nothing.
+            _code << generateIndependentVariableDeclaration() << "\n"; // independent vars: x
+            _code << generateDependentVariableDeclaration() << "\n"; // dependent vars: y
             _code << generateTemporaryVariableDeclaration(true, false,
                                                           _info->atomicFunctionsMaxForward,
-                                                          _info->atomicFunctionsMaxReverse) << "\n";
+                                                          _info->atomicFunctionsMaxReverse) << "\n"; // auxiliary variables.
             _nameGen->prepareCustomFunctionVariables(_code);
             for (auto & localFuncName : localFuncNames) {
                 _code << _spaces << localFuncName << "(" << localFuncArgs_ << ");\n";
@@ -930,8 +966,20 @@ protected:
                 _ss << "#include <math.h>\n"
                         "#include <stdio.h>\n\n"
                     << ATOMICFUN_STRUCT_DEFINITION << "\n\n";
-                printFunctionDeclaration(_ss, "void", _functionName, funcArgDcl_);
+                if(_forCuda){
+                  printFunctionDeclaration(_ss, "__device__ void", _functionName, funcArgDcl_);
+                }
+                else {
+                  printFunctionDeclaration(_ss, "void", _functionName, funcArgDcl_);
+                }
+
                 _ss << " {\n";
+                if(_forCuda){
+                  getThreadSpecificOffset(_ss);
+                }
+                else {
+                  setOffsetToZero(_ss);
+                }
                 _nameGen->customFunctionVariableDeclarations(_ss);
                 _ss << generateIndependentVariableDeclaration() << "\n";
                 _ss << generateDependentVariableDeclaration() << "\n";
